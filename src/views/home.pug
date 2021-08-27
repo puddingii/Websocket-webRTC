@@ -9,6 +9,10 @@ html(lang="en")
     body 
         header
             h1 hello everybody
-        main 
-            p adlkfjaslkj
+        main
+            #setNick 
+                form(action="")
+                    input(placeholder="Nickname", required, type="text")
+                    button Enter Room
+        script(src="/socket.io/socket.io.js")
         script(src="/userLoading/js/app.js")

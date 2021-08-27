@@ -1,17 +1,13 @@
-const socket = new WebSocket(`ws://${window.location.host}`);  // 서버로의 연결을 보여줌.
+const socket = io();
 
-socket.addEventListener("open", () => {
-    console.log("Connected to Server");
-});
+const setNick = document.getElementById("setNick");
+const form = setNick.querySelector("form");
 
-socket.addEventListener("message", (message) => {
-    console.log("just got this ", message.data, " from the server");
-});
+const handleNickSubmit = (event) => {
+    event.preventDefault();
+    const input = form.querySelector("input");
+    socket.emit("setNick", { value: input.value }, () => { console.log("server is done!") }); // 3번째 인자는 프론트에서 백으로 보낸 뒤 프론트에서 실행시키는 함수임.
+    input.value = "";
+}
 
-socket.addEventListener("close", () => {
-    console.log("Disconnected");
-});
-
-setTimeout(() => {
-    socket.send("hello lkajdflkjasd");
-}, 10000);
+form.addEventListener("submit", handleNickSubmit);
