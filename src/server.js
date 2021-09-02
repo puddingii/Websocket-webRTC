@@ -1,7 +1,8 @@
 import http from "http";
 // import WebSocket from "ws";
-import SocketIo from "socket.io";
+import { Server } from "socket.io";
 import express from "express";
+import { instrument } from "@socket.io/admin-ui";
 
 const app = express();
 const PORT = process.env.PORT || 4400;
@@ -13,17 +14,70 @@ app.use("/userLoading", express.static(__dirname + "/userLoading"));
 app.get("/", (req, res) => res.render("home"));
 app.get("/*", (req, res) => res.redirect("/"));
 
-const handleListen = () => console.log(`Listening on: http://localhost:${PORT}`);
-
 const httpServer = http.createServer(app)
-const wsServer = SocketIo(httpServer);
+const wsServer = new Server(httpServer, {
+    cors: {
+        origin: ["https://admin.socket.io"],
+        credentials: true
+    }
+});
+instrument(wsServer, {
+    auth: false
+});
+
+const getPublicRooms = () => {
+    const {
+        sids,
+        rooms
+    } = wsServer.sockets.adapter;
+    const publicRooms = [];
+    rooms.forEach((_, key) => {
+        if(sids.get(key) === undefined) {
+            publicRooms.push(key);
+        }
+    });
+    return publicRooms;
+}
+
+const countRoom = (roomName) => {
+    return wsServer.sockets.adapter.rooms.get(roomName)?.size; // roomName이 아닐 수도 있기 때문에
+}
 
 wsServer.on("connection", (socket) => {
-    socket.on("setNick", (message, done) => {
-        console.log(message.value);
-        setTimeout(() => {
-            done();
-        }, 10000);
+    socket["nickname"] = "Unknown";
+    socket.onAny((event) => { //어디에서든지 
+        console.log(`Socket Event: ${event}`);
+    });
+    socket.on("enter_room", (roomName, done) => {
+        socket.join(roomName);
+        done();
+        socket.to(roomName).emit("enter_room", socket.nickname, countRoom(roomName)); //roomName에 해당하는 곳에 welcome을 전체적으로 뿌려줌.
+        wsServer.sockets.emit("room_change", getPublicRooms());
+    });
+    socket.on("offer", (offer, roomName) => {
+        socket.to(roomName).emit("offer", offer);
+    });
+    socket.on("answer", (answer, roomName) => {
+        socket.to(roomName).emit("answer", answer);
+    });
+    socket.on("disconnecting", () => {  //방은 나가지 않고 disconnecting됬을때
+        socket.rooms.forEach((room) => {
+            socket.to(room).emit("logout", socket.nickname, countRoom(room)-1);
+        });
+        
+    });
+    socket.on("disconnect", () => {
+        wsServer.sockets.emit("room_change", getPublicRooms());
+    });
+    socket.on("new_message", (msg, room, done) => {
+        socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
+        done();
+    });
+    socket.on("set_nickname", (nickname) => {
+        socket["nickname"] = nickname;
+    });
+    socket.on("ice", (ice, roomName) => {
+        socket.to(roomName).emit("ice", ice);
     });
 });
 
@@ -53,4 +107,5 @@ wsServer.on("connection", (socket) => {
 //     })
 // });  
 
+const handleListen = () => console.log(`Listening on: http://localhost:${PORT}`);
 httpServer.listen(PORT, handleListen);

@@ -10,9 +10,27 @@ html(lang="en")
         header
             h1 hello everybody
         main
-            #setNick 
+            #setRoom 
                 form(action="")
-                    input(placeholder="Nickname", required, type="text")
+                    input(placeholder="room", required, type="text")
                     button Enter Room
+                h4 Open Rooms:
+                ul
+            #innerRoom 
+                h3
+                ul
+                form#nickName
+                    input(placeholder="nickName", required, type="text")
+                    button Save
+                form#msg
+                    input(placeholder="message", required, type="text")
+                    button Send
+            #stream
+                #myStream 
+                    video#myFace(autoplay, playsinline, width="400", height="400")
+                    button#mute Mute
+                    button#camera Camera off
+                    select#cameras
+                    video#peerFace(autoplay, playsinline, width="400", height="400")
         script(src="/socket.io/socket.io.js")
         script(src="/userLoading/js/app.js")
