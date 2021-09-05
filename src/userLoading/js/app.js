@@ -84,6 +84,13 @@ const handleMuteClick = () => {
 
 const handleCameraSelect = async() => {
     await getMedia(camerasSelect.value);
+    if(peerConnection) {
+        const videoTrack = myStream.getVideoTracks()[0];  // 자신의 stream
+        const videoSender = peerConnection.getSender().find((sender) => sender.track.kind === "video");  // 상대에게 보내는 stream
+        videoSender.replaceTrack(videoTrack);
+        // Real Time Sender 출력. 여기서 Real Time Communication의 track을 바꿔줘야 카메라를 바꿔도 계속 영상이나옴.
+        // sender은 우리의 peer로 보내진 media stream track을 컨트롤하게 해줌.
+    }
 };
 
 // Message & Nickname 관리
@@ -151,7 +158,19 @@ const handleAddStream = (data) => {
 };
 
 const makeConnection = () => {
-    peerConnection = new RTCPeerConnection();
+    peerConnection = new RTCPeerConnection({
+        iceServers: [  // google의 무료 stun서버를 사용 ( 공용주소를 찾고 peer-to-peer하기 위함. )
+            {
+                urls: [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302",
+                ]
+            }
+        ]
+    });
     peerConnection.addEventListener("icecandidate", handleIce); // rtc연결이 되면 icecandidate이벤트 발생. 피어 연결 요청을 보낸다고 생각하면됨.
     peerConnection.addEventListener("track", handleAddStream);
     myStream.getTracks().forEach((track) => {
